@@ -103,12 +103,11 @@ function addData(svg, data, color) {
   svg.append('g')
     .selectAll('.dot')
     .data(dots)
-    .enter().append('circle')
+    .enter().append('path')
     .attr('class', 'dot')
-    .style('fill', d => color(d[0]))
-    .attr('cx', d => d[1])
-    .attr('cy', d => d[2])
-    .attr('r', 2);
+    .attr('d', d3.symbol().size(20).type(d => d3.symbols[d[0] % d3.symbols.length]))
+    .attr('transform', d => `translate(${d[1]},${d[2]})`)
+    .style('fill', d => color(d[0]));
 }
 
 function addLegend(svg, states, key, width, height, color) {
@@ -123,6 +122,10 @@ function addLegend(svg, states, key, width, height, color) {
   legend.append('line')
     .style('stroke', (_, i) => color(i))
     .attr('x2', 20);
+  legend.append('path')
+    .attr('d', d3.symbol().size(30).type((_, i) => d3.symbols[i % d3.symbols.length]))
+    .attr('transform', 'translate(10,0)')
+    .style('fill', (_, i) => color(i));
   legend.append('text')
     .attr('dy', '.35em')
     .attr('x', 26)
