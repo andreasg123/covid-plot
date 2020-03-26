@@ -175,7 +175,7 @@ function plotData(data) {
   }
 }
 
-function processData(data) {
+function processData(data, states) {
   const max_pos = new Map();
   data.forEach(d => {
     if (!max_pos.has(d.state)) {
@@ -183,8 +183,14 @@ function processData(data) {
     }
   });
   const top = Array.from(max_pos).sort((a, b) => b[1] - a[1])
-  top.length = 10;
-  const states = top.map(t => t[0]);
+  const max_count = 10;
+  top.length = max_count;
+  for (const t of top) {
+    if (states.indexOf(t[0]) < 0) {
+      states.push(t[0]);
+    }
+  }
+  states.length = Math.min(states.length, max_count);
   const include = new Set(states);
   const series_map = new Map();
   data.forEach(d => {
@@ -198,11 +204,15 @@ function processData(data) {
   return states.map(s => [s, series_map.get(s).reverse()]);
 }
 
-async function loadData() {
+async function loadData(states) {
+  const input = document.querySelector('input[type=text]');
+  if (input) {
+    input.value = states;
+  }
+  states = states ? states.toUpperCase().split(/[, ]+/) : [];
   const url = 'https://covidtracking.com/api/states/daily';
   const data = await makeXHR({url});
-  plotData(processData(data));
+  plotData(processData(data, states));
 }
 
-loadData();
-
+loadData((new URL(document.location)).searchParams.get('states'));
