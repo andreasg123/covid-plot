@@ -138,18 +138,19 @@ function addLegend(svg, states, key, width, height, color) {
 }
 
 function plotData(data) {
+  const state_data = data.slice(0, 10);
   const min_y = 1;
-  const max_x = data.reduce((max_x, s) => Math.max(max_x, s[1][s[1].length - 1][0]), 0);
+  const max_x = state_data.reduce((max_x, s) => Math.max(max_x, s[1][s[1].length - 1][0]), 0);
   const margin = {top: 5, right: 15, bottom: 20, left: 50};
   const width = 400;
   const height = 400;
   const keys = [null, 'cases', 'deaths'];
   for (let col = 1; col <= 2; col++) {
-    const min_x = data.reduce((min_x, s) => {
+    const min_x = state_data.reduce((min_x, s) => {
       const first = s[1].findIndex(d => d[col] > 0);
       return first < 0 ? min_x : Math.min(min_x, s[1][first][0]);
     }, Number.MAX_VALUE);
-    const max_y = data.reduce((max_y, s) => Math.max(max_y, s[1][s[1].length - 1][col]), 0);
+    const max_y = state_data.reduce((max_y, s) => Math.max(max_y, s[1][s[1].length - 1][col]), 0);
     const svg = d3.select(`#${keys[col]}`)
           .append('svg')
           .attr('width', width + margin.left + margin.right)
@@ -165,14 +166,42 @@ function plotData(data) {
           .range([height, 0]);
     const color = d3.scaleOrdinal(d3.schemeCategory10);
     addAxes(svg, xScale, yScale, width, height, col === 1 ? 4 : 2);
-    const states = data.map(c => c[0]);
-    const data2 = data.map(c => c[1]
-                           .filter(d => d[col] > 0)
-                           .map(d => [xScale(toDate(d[0])), yScale(d[col])]));
+    const states = state_data.map(c => c[0]);
+    const data2 = state_data.map(c => c[1]
+                                 .filter(d => d[col] > 0)
+                                 .map(d => [xScale(toDate(d[0])), yScale(d[col])]));
     addDoubling(svg, xScale, yScale, width, height, min_x, max_x, min_y);
     addData(svg, data2, color);
     addLegend(svg, states, keys[col], width, height, color);
   }
+}
+
+function summarizeData(data) {
+  const state_data = data.slice(0, 20);
+  const summary = document.getElementById('summary');
+  // It's not worth to load React for this small table.
+  const table = document.createElement('table');
+  summary.appendChild(table);
+  const header = document.createElement('tr');
+  table.appendChild(header);
+  ['', 'Cases', 'Deaths'].forEach(h => {
+    const th = document.createElement('th');
+    th.appendChild(document.createTextNode(h));
+    header.appendChild(th);
+  });
+  state_data.forEach(s => {
+    const tr = document.createElement('tr');
+    table.appendChild(tr);
+    const td1 = document.createElement('td');
+    td1.appendChild(document.createTextNode(s[0]));
+    tr.appendChild(td1);
+    for (let i = 1; i <= 2; i++) {
+      const td2 = document.createElement('td');
+      td2.className = 'right';
+      td2.appendChild(document.createTextNode(s[1][s[1].length - 1][i].toLocaleString('en-US')));
+      tr.appendChild(td2);
+    }
+  });
 }
 
 function processData(data, states) {
@@ -182,24 +211,23 @@ function processData(data, states) {
       max_pos.set(d.state, d.positive);
     }
   });
-  const top = Array.from(max_pos).sort((a, b) => b[1] - a[1])
-  const max_count = 10;
-  top.length = max_count;
-  for (const t of top) {
-    if (states.indexOf(t[0]) < 0) {
-      states.push(t[0]);
-    }
+  let top_states = Array.from(max_pos)
+      .sort((a, b) => b[1] - a[1])
+      .map(t => t[0]);
+  if (states && states.length) {
+    const remove = new Set(states);
+    states.push(...top_states.filter(t => !remove.has(t)));
   }
-  states.length = Math.min(states.length, max_count);
-  const include = new Set(states);
-  const series_map = new Map();
+  else {
+    states = top_states;
+  }
+  const series_map = new Map(states.map(s => [s, []]));
   data.forEach(d => {
-    if (!include.has(d.state)) {
-      return;
+    const series = series_map.get(d.state);
+    if (series) {
+      // an empty array is truthy
+      series.push([d.date, d.positive || 0, d.death || 0]);
     }
-    const series = series_map.get(d.state) || [];
-    series.push([d.date, d.positive || 0, d.death || 0]);
-    series_map.set(d.state, series);
   });
   return states.map(s => [s, series_map.get(s).reverse()]);
 }
@@ -211,8 +239,9 @@ async function loadData(states) {
   }
   states = states ? states.toUpperCase().split(/[, ]+/) : [];
   const url = 'https://covidtracking.com/api/states/daily';
-  const data = await makeXHR({url});
-  plotData(processData(data, states));
+  const data = processData(await makeXHR({url}), states);
+  plotData(data);
+  summarizeData(data);
 }
 
 loadData((new URL(document.location)).searchParams.get('states'));
