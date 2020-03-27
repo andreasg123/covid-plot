@@ -16,12 +16,15 @@
 </div>
 
 <p><form><b>States:</b> <input type="text" name="states">
-<input type="submit" value="Plot">&nbsp;&nbsp; States with the most cases will be added.
+<input type="submit" value="Plot">&nbsp;&nbsp; Plus the states with the most cases
 </form></p>
 
 <p>The y-axis uses a log scale, meaning that a straight line indicates
 exponential growth. The dotted lines are guides for different rates of daily
 exponential growth, 100%, 41%, 26%, 19%, i.e., doubling every 1 to 4 days.</p>
+
+<p>In the table, the daily exponential growth percentage is determined by
+linear regression in the log domain with the 3 previous days.</p>
 
 <p>Data from the <a href="https://covidtracking.com/">COVID Tracking Project</a>.
 JavaScript: <a href="https://github.com/andreasg123/covid-plot">GitHub</a>.</p>

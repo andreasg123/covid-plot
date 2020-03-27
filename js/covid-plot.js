@@ -176,6 +176,35 @@ function plotData(data) {
   }
 }
 
+function getSlope(values) {
+  // slope = (n*sum(x*y)-sum(x)*sum(y)) / (n*sum(x^2) - sum(x)^2)
+  // x = 0..(n-1)
+  // sum(x)=(n-1)*n/2
+  // sum(x^2)=(n-1)*n*(2*(n-1)+1)/6 = (n-1)*n*(2*n-1)/6
+  const n = values.length;
+  const sum_x = (n - 1) * n / 2;
+  const sum_x2 = (n - 1) * n * (2 * n - 1) / 6;
+  const sum_y = values.reduce((sum, y) => sum + y, 0);
+  const sum_xy = values.reduce((sum, y, i) => sum + i * y, 0);
+  const slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
+  return slope;
+}
+
+function getGrowths(data) {
+  const n = 4;
+  return [1, 2].map(i => {
+    let values = data.slice(Math.max(0, data.length - n)).map(d => d[i]);
+    const idx = values.findIndex(x => x > 0);
+    if (idx < 0 || idx === data.length - 1) {
+      return '';
+    }
+    if (idx > 0) {
+      values.splice(0, idx);
+    }
+    return `${(100 * (Math.exp(getSlope(values.map(x => Math.log(x)))) - 1)).toFixed(0)}%`
+  });
+}
+
 function summarizeData(data) {
   const state_data = data.slice(0, 20);
   const summary = document.getElementById('summary');
@@ -185,10 +214,14 @@ function summarizeData(data) {
   const header = document.createElement('tr');
   table.appendChild(header);
   ['', 'Cases', 'Deaths'].forEach(h => {
-    const th = document.createElement('th');
-    th.appendChild(document.createTextNode(h));
-    header.appendChild(th);
+    const th1 = document.createElement('th');
+    th1.appendChild(document.createTextNode(h));
+    header.appendChild(th1);
   });
+  const th2 = document.createElement('th');
+  th2.colSpan = 2;
+  th2.appendChild(document.createTextNode('Daily'));
+  header.appendChild(th2);
   state_data.forEach(s => {
     const tr = document.createElement('tr');
     table.appendChild(tr);
@@ -198,7 +231,16 @@ function summarizeData(data) {
     for (let i = 1; i <= 2; i++) {
       const td2 = document.createElement('td');
       td2.className = 'right';
+      if (i === 2) {
+        td2.style.paddingRight = '1em';
+      }
       td2.appendChild(document.createTextNode(s[1][s[1].length - 1][i].toLocaleString('en-US')));
+      tr.appendChild(td2);
+    }
+    for (const g of getGrowths(s[1])) {
+      const td2 = document.createElement('td');
+      td2.className = 'right';
+      td2.appendChild(document.createTextNode(g));
       tr.appendChild(td2);
     }
   });
