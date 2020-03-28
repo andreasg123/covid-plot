@@ -232,7 +232,7 @@ function summarizeData(data) {
       const td2 = document.createElement('td');
       td2.className = 'right';
       if (i === 2) {
-        td2.style.paddingRight = '1em';
+        td2.style.paddingRight = '0.75em';
       }
       td2.appendChild(document.createTextNode(s[1][s[1].length - 1][i].toLocaleString('en-US')));
       tr.appendChild(td2);

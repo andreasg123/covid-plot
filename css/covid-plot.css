@@ -51,6 +51,10 @@ text {
 th, td {
     font-size: 80%;
 }
+th {
+    padding-left: 0.5em;
+}
 .right {
     text-align: right;
+    padding-left: 0.5em;
 }
