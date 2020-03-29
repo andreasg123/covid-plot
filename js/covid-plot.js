@@ -88,26 +88,49 @@ function addDoubling(svg, xScale, yScale, width, height, min_x, max_x, min_y) {
 
 function addData(svg, data, color) {
   // State lines
-  svg.append('g')
+  var line = svg.append('g')
     .attr('class', 'line')
     .selectAll('path')
     .data(data)
     .enter().append('path')
     .style('stroke', (_, i) => color(i))
+    .style('stroke-width', '3px')
+    .on("mouseover", fade(.1))
+    .on("mouseout", fade(1))
     .attr('d', d3.line());
   const dots = [];
   data.forEach((c, i) => {
     dots.push(...c.map(d => [i, ...d]));
   });
   // State dots
-  svg.append('g')
-    .selectAll('.dot')
+  var dot = svg.append('g');
+  dot
+    .selectAll('dot')
     .data(dots)
     .enter().append('path')
     .attr('class', 'dot')
     .attr('d', d3.symbol().size(20).type(d => d3.symbols[d[0] % d3.symbols.length]))
     .attr('transform', d => `translate(${d[1]},${d[2]})`)
     .style('fill', d => color(d[0]));
+
+  function fade(opacity) {
+    return function(d) {
+      line.transition().duration(200)
+        .style("fill-opacity", function(o) {
+            return d == o? 1 : opacity;
+        })
+        .style("stroke-opacity", function(o) {
+            return d == o ? 1 : opacity;
+        });
+      dot.transition().duration(200)
+        .style("fill-opacity", function(o) {
+            return d == o? 1 : opacity;
+        })
+        .style("stroke-opacity", function(o) {
+            return d == o ? 1 : opacity;
+        });
+    };
+  };
 }
 
 function addLegend(svg, states, key, width, height, color) {
