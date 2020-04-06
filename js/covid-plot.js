@@ -43,7 +43,7 @@ function addAxes(svg, xScale, yScale, width, height, grid_ticks) {
   svg.append('g')
     .attr('class', 'x axis')
     .attr('transform', `translate(0,${height})`)
-    .call(xAxis.tickFormat(d3.timeFormat("%m/%d")));
+    .call(xAxis.ticks(8).tickFormat(d3.timeFormat("%m/%d")));
   // Don't use scientific notation for the y-axis and add thousand separators
   svg.append('g')
     .attr('class', 'y axis')
@@ -53,6 +53,7 @@ function addAxes(svg, xScale, yScale, width, height, grid_ticks) {
     .attr('class', 'grid')
     .attr('transform', `translate(0,${height})`)
     .call(xAxis
+          .ticks(8)
           .tickSize(-height)
           .tickFormat(''));
   svg.append('g')			
@@ -179,7 +180,7 @@ function plotData(data) {
           //.nice()
           .range([height, 0]);
     const color = d3.scaleOrdinal(d3.schemeCategory10);
-    addAxes(svg, xScale, yScale, width, height, col === 1 ? 4 : 2);
+    addAxes(svg, xScale, yScale, width, height, col === 1 ? 4 : 3);
     const states = state_data.map(c => c[0]);
     const data2 = state_data.map(c => c[1]
                                  .filter(d => d[col] > 0)
