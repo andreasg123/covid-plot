@@ -43,7 +43,7 @@ function addAxes(svg, xScale, yScale, width, height, grid_ticks) {
   svg.append('g')
     .attr('class', 'x axis')
     .attr('transform', `translate(0,${height})`)
-    .call(xAxis.ticks(8).tickFormat(d3.timeFormat("%m/%d")));
+    .call(xAxis.ticks(6).tickFormat(d3.timeFormat("%m/%d")));
   // Don't use scientific notation for the y-axis and add thousand separators
   svg.append('g')
     .attr('class', 'y axis')
@@ -53,7 +53,7 @@ function addAxes(svg, xScale, yScale, width, height, grid_ticks) {
     .attr('class', 'grid')
     .attr('transform', `translate(0,${height})`)
     .call(xAxis
-          .ticks(8)
+          .ticks(6)
           .tickSize(-height)
           .tickFormat(''));
   svg.append('g')			
