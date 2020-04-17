@@ -70,7 +70,7 @@ function addDoubling(svg, xScale, yScale, width, height, min_x, max_x, min_y) {
   const days = Math.round((toDate(max_x).getTime() - toDate(min_x).getTime()) /
                           (24 * 3600000));
   // This assumes clipping.
-  const doubling = [1, 2, 3, 4]
+  const doubling = [1, 2, 3, 4, 5, 6, 7]
         .map(d => [[xScale(toDate(min_x)), yScale(min_y)],
                    [xScale(toDate(max_x)), yScale(Math.pow(2, days / d) * min_y)]]);
   svg.append('defs').append('clipPath')
@@ -189,7 +189,7 @@ function plotData(data) {
           //.nice()
           .range([height, 0]);
     const color = d3.scaleOrdinal(d3.schemeCategory10);
-    addAxes(svg, xScale, yScale, width, height, col === 1 ? 4 : 3);
+    addAxes(svg, xScale, yScale, width, height, Math.floor(Math.log(max_y) / Math.log(10)));
     const states = state_data.map(c => c[0]);
     const data2 = state_data.map(c => c[1]
                                  .filter(d => d[col] > 0)
@@ -270,11 +270,16 @@ function summarizeData(data) {
   });
 }
 
-function processData(data, states) {
+function processData(data, states, normalize) {
   const max_pos = new Map();
   data.forEach(d => {
     if (!max_pos.has(d.state)) {
-      max_pos.set(d.state, d.positive);
+      let cases = d.positive || 0;
+      if (normalize) {
+        const p = pop[d.state];
+        cases *= 1000000 / p;
+      }
+      max_pos.set(d.state, cases);
     }
   });
   let top_states = Array.from(max_pos)
@@ -292,22 +297,91 @@ function processData(data, states) {
     const series = series_map.get(d.state);
     if (series) {
       // an empty array is truthy
-      series.push([d.date, d.positive || 0, d.death || 0]);
+      let cases = d.positive || 0;
+      let deaths = d.death || 0;
+      if (normalize) {
+        const p = pop[d.state];
+        cases = Math.round(cases * 1000000 / p);
+        deaths = Math.round(deaths * 1000000 / p);
+      }
+      series.push([d.date, cases, deaths]);
     }
   });
   return states.map(s => [s, series_map.get(s).reverse()]);
 }
 
-async function loadData(states) {
+async function loadData(states, normalize) {
   const input = document.querySelector('input[type=text]');
-  if (input) {
-    input.value = states;
-  }
+  input.value = states;
+  const cb = document.getElementById('normalize');
+  cb.checked = normalize;
   states = states ? states.toUpperCase().split(/[, ]+/) : [];
   const url = 'https://covidtracking.com/api/states/daily';
-  const data = processData(await makeXHR({url}), states);
+  const data = processData(await makeXHR({url}), states, normalize);
   plotData(data);
   summarizeData(data);
 }
 
-loadData((new URL(document.location)).searchParams.get('states'));
+const params = (new URL(document.location)).searchParams;
+loadData(params.get('states'), params.get('normalize') === 'true');
+
+// https://en.wikipedia.org/wiki/List_of_states_and_territories_of_the_United_States_by_population
+// Estimate, July 15, 2019
+const pop = {
+  'CA': 39512223,
+  'TX': 28995881,
+  'FL': 21477737,
+  'NY': 19453561,
+  'PA': 12801989,
+  'IL': 12671821,
+  'OH': 11689100,
+  'GA': 10617423,
+  'NC': 10488084,
+  'MI': 9986857,
+  'NJ': 8882190,
+  'VA': 8535519,
+  'WA': 7614893,
+  'AZ': 7278717,
+  'MA': 6949503,
+  'TN': 6833174,
+  'IN': 6732219,
+  'MO': 6137428,
+  'MD': 6045680,
+  'WI': 5822434,
+  'CO': 5758736,
+  'MN': 5639632,
+  'SC': 5148714,
+  'AL': 4903185,
+  'LA': 4648794,
+  'KY': 4467673,
+  'OR': 4217737,
+  'OK': 3956971,
+  'CT': 3565287,
+  'UT': 3205958,
+  'PR': 3193694,
+  'IA': 3155070,
+  'NV': 3080156,
+  'AR': 3017825,
+  'MS': 2976149,
+  'KS': 2913314,
+  'NM': 2096829,
+  'NE': 1934408,
+  'WV': 1792147,
+  'ID': 1787065,
+  'HI': 1415872,
+  'NH': 1359711,
+  'ME': 1344212,
+  'MT': 1068778,
+  'RI': 1059361,
+  'DE': 973764,
+  'SD': 884659,
+  'ND': 762062,
+  'AK': 731545,
+  'DC': 705749,
+  'VT': 623989,
+  'WY': 578759,
+  'GU': 165718,
+  'VI': 104914,
+  'AS': 55641,
+  'MP': 55194
+};
