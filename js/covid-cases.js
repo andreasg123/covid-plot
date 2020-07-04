@@ -21,17 +21,18 @@ function addAxes(svg, xScale, yScale, width, height) {
           .tickFormat(''));
 }
 
-function plotData(data) {
-  data = data.slice(0, 10);
+function plotData(data, same_scale) {
   console.log(data);
   const margin = {top: 20, right: 20, bottom: 70, left: 45}
   const width = 800 - margin.left - margin.right;
   const height = 300 - margin.top - margin.bottom;
+  const overall_max_y = same_scale &&
+        Math.ceil(Math.max(...data.map(([_, sd]) => Math.max(...sd.map(x => x.positive)))));
   for (const [state, sd] of data) {
     console.log(state, sd);
     const min_x = sd[0].date;
     const max_x = sd[sd.length - 1].date;
-    const max_y = Math.ceil(Math.max(...sd.map(x => x.positive)));
+    const max_y = same_scale ? overall_max_y : Math.ceil(Math.max(...sd.map(x => x.positive)));
     const svg = d3.select('.container')
           .append('svg')
           .attr('width', width + margin.left + margin.right)
@@ -121,18 +122,22 @@ function processData(data, states, normalize) {
   return states.map(s => [s, state_map.get(s)]);
 }
 
-async function loadData(states, normalize) {
+async function loadData(states, normalize, same_scale) {
   const input = document.querySelector('input[type=text]');
   input.value = states;
-  const cb = document.getElementById('normalize');
+  let cb = document.getElementById('normalize');
   cb.checked = normalize;
+  cb = document.getElementById('scale');
+  cb.checked = same_scale;
   states = states ? states.toUpperCase().split(/[, ]+/) : [];
   const url = 'https://covidtracking.com/api/states/daily';
   const res = await fetch(url);
   const json = await res.json();
-  const data = processData(json, states, normalize);
-  plotData(data);
+  let data = processData(json, states, normalize);
+  data = data.slice(0, 10);
+  plotData(data, same_scale);
 }
 
 const params = (new URL(document.location)).searchParams;
-loadData(params.get('states'), params.get('normalize') === 'true');
+loadData(params.get('states'), params.get('normalize') === 'true',
+         params.get('scale') === 'same');
