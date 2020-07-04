@@ -1,40 +1,5 @@
-function makeXHR({method='GET', url, data, headers, timeout, responseType='json'}) {
-  return new Promise((resolve, reject) => {
-    const req = new XMLHttpRequest();
-    if (timeout) {
-      req.timeout = timeout;
-    }
-    for (const evt_type of ['load', 'error', 'abort', 'timeout']) {
-      req.addEventListener(evt_type, () => {
-        if (evt_type === 'load' && req.status === 200) {
-          resolve(req.response);
-        }
-        else {
-          const err = new Error(evt_type !== 'load' ? evt_type : `HTTP ${req.status}`);
-          err.request = req;
-          reject(err);
-        }
-      });
-    }
-    req.open(method, url, true);
-    for (const h in headers) {
-      req.setRequestHeader(h, headers[h]);
-    }
-    req.responseType = responseType;
-    req.send(data);
-  });
-}
-
-function toDate(d) {
-  // Converts a number in the format 20200321 into a Date object.
-  // Don't turn d into an ISO string '2020-03-21' because that produces UTC,
-  // causing data points not to line up with x-axis marks.
-  const day = d % 100;
-  d = (d - day) / 100;
-  const month = d % 100;
-  const year = (d - month) / 100;
-  return new Date(year, month - 1, day);
-}
+import {population} from './population.js';
+import {toDate} from './utils.js';
 
 function addAxes(svg, xScale, yScale, width, height, grid_ticks) {
   // Axes
@@ -47,7 +12,7 @@ function addAxes(svg, xScale, yScale, width, height, grid_ticks) {
   // Don't use scientific notation for the y-axis and add thousand separators
   svg.append('g')
     .attr('class', 'y axis')
-    .call(yAxis.ticks(8, ',.0f'));
+    .call(yAxis.ticks(7, ',.0f'));
   // Grid
   svg.append('g')			
     .attr('class', 'grid')
@@ -157,8 +122,8 @@ function plotData(data) {
   const min_y = 1;
   const max_x = state_data.reduce((max_x, s) => Math.max(max_x, s[1][s[1].length - 1][0]), 0);
   const margin = {top: 5, right: 15, bottom: 20, left: 50};
-  const width = 400;
-  const height = 400;
+  const width = 700;
+  const height = 300;
   const keys = [null, 'cases', 'deaths'];
   for (let col = 1; col <= 2; col++) {
     const min_x = state_data.reduce((min_x, s) => {
@@ -267,8 +232,8 @@ function processData(data, states, normalize) {
     if (!max_pos.has(d.state)) {
       let cases = d.positive || 0;
       if (normalize) {
-        const p = pop[d.state];
-        cases *= 1000000 / p;
+        const p = population[d.state];
+        cases *= 100000 / p;
       }
       max_pos.set(d.state, cases);
     }
@@ -291,9 +256,9 @@ function processData(data, states, normalize) {
       let cases = d.positive || 0;
       let deaths = d.death || 0;
       if (normalize) {
-        const p = pop[d.state];
-        cases = Math.round(cases * 1000000 / p);
-        deaths = Math.round(deaths * 1000000 / p);
+        const p = population[d.state];
+        cases = Math.round(cases * 100000 / p);
+        deaths = Math.round(deaths * 100000 / p);
       }
       series.push([d.date, cases, deaths]);
     }
@@ -308,71 +273,12 @@ async function loadData(states, normalize) {
   cb.checked = normalize;
   states = states ? states.toUpperCase().split(/[, ]+/) : [];
   const url = 'https://covidtracking.com/api/states/daily';
-  const data = processData(await makeXHR({url}), states, normalize);
+  const res = await fetch(url);
+  const json = await res.json();
+  const data = processData(json, states, normalize);
   plotData(data);
   summarizeData(data);
 }
 
 const params = (new URL(document.location)).searchParams;
 loadData(params.get('states'), params.get('normalize') === 'true');
-
-// https://en.wikipedia.org/wiki/List_of_states_and_territories_of_the_United_States_by_population
-// Estimate, July 15, 2019
-const pop = {
-  'CA': 39512223,
-  'TX': 28995881,
-  'FL': 21477737,
-  'NY': 19453561,
-  'PA': 12801989,
-  'IL': 12671821,
-  'OH': 11689100,
-  'GA': 10617423,
-  'NC': 10488084,
-  'MI': 9986857,
-  'NJ': 8882190,
-  'VA': 8535519,
-  'WA': 7614893,
-  'AZ': 7278717,
-  'MA': 6949503,
-  'TN': 6833174,
-  'IN': 6732219,
-  'MO': 6137428,
-  'MD': 6045680,
-  'WI': 5822434,
-  'CO': 5758736,
-  'MN': 5639632,
-  'SC': 5148714,
-  'AL': 4903185,
-  'LA': 4648794,
-  'KY': 4467673,
-  'OR': 4217737,
-  'OK': 3956971,
-  'CT': 3565287,
-  'UT': 3205958,
-  'PR': 3193694,
-  'IA': 3155070,
-  'NV': 3080156,
-  'AR': 3017825,
-  'MS': 2976149,
-  'KS': 2913314,
-  'NM': 2096829,
-  'NE': 1934408,
-  'WV': 1792147,
-  'ID': 1787065,
-  'HI': 1415872,
-  'NH': 1359711,
-  'ME': 1344212,
-  'MT': 1068778,
-  'RI': 1059361,
-  'DE': 973764,
-  'SD': 884659,
-  'ND': 762062,
-  'AK': 731545,
-  'DC': 705749,
-  'VT': 623989,
-  'WY': 578759,
-  'GU': 165718,
-  'VI': 104914,
-  'AS': 55641,
-  'MP': 55194
-};
