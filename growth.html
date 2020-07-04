@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>COVID-19 U.S. States Growth</title>
+<link rel="stylesheet" type="text/css" href="css/covid-plot.css"/>
+</head>
+<body>
+<h3>COVID-19 U.S. States Growth</h3>
+
+<div class="container">
+  <div class="container2">
+    <div id="cases"></div>
+    <div id="deaths"></div>
+  </div>
+  <div id="summary"></div>
+</div>
+
+<p><form><b>States:</b> <input type="text" name="states">&nbsp;
+<label for="normalize">per 100,000</label><input type="checkbox" id="normalize" name="normalize" value="true">&nbsp;
+<input type="submit" value="Plot">&nbsp;&nbsp; Plus the states with the most cases
+</form></p>
+
+<p>The y-axis uses a log scale, meaning that a straight line indicates
+exponential growth. The dotted lines are guides for different rates of daily
+exponential growth, 100%, 41%, 26%, 19%, 15%, 12%, 10%, i.e., doubling every 1 to 7 days.</p>
+
+<p>Moving the mouse over a line will fade out the other lines.</p>
+
+<p>In the table, the daily exponential growth percentage is determined by
+linear regression in the log domain with the 3 previous days.</p>
+
+<p>Data from the <a href="https://covidtracking.com/">COVID Tracking Project</a>.
+JavaScript: <a href="https://github.com/andreasg123/covid-plot">GitHub</a>.</p>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.15.0/d3.min.js" crossorigin></script>
+<script src="js/covid-plot.js" type="module" crossorigin></script>
+</body>
+</html>
