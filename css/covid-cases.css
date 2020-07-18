@@ -57,3 +57,13 @@ th {
     text-align: right;
     padding-left: 0.5em;
 }
+
+.tooltip {
+    position: absolute;
+    text-align: center;
+    padding: 10px;
+    background: lightsteelblue;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+}
