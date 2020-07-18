@@ -1,6 +1,10 @@
 import {population} from './population.js';
 import {toDate} from './utils.js';
 
+var div = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
 function addAxes(svg, xScale, yScale, width, height) {
   // Axes
   const xAxis = d3.axisBottom(xScale);
@@ -55,7 +59,27 @@ function plotData(data, same_scale) {
       .attr("x", d => xScale(d[0]))
       .attr("width", bar_width)
       .attr("y", d => yScale(d[1]))
-      .attr("height", d => height - yScale(d[1]));
+      .attr("height", d => height - yScale(d[1]))
+
+      // tooltip handler
+      .on("mouseover", function(d) {
+        div.transition()
+            .duration(200)
+            .style("opacity", .9);
+        div	.html(d[1] + ' cases<br/>' + d3.timeFormat('%m/%d')(d[0]))
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
+        })
+      .on('mousemove', function (d) {
+        div.style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY - 28) + "px");
+      })
+      .on("mouseout", function(d) {
+          div.transition()
+              .duration(500)
+              .style("opacity", 0);
+    });
+
     svg.append('g')
       .attr('class', 'line')
       .selectAll('path')
