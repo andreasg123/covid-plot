@@ -17,12 +17,20 @@ function addAxes(svg, xScale, yScale, width, height) {
   svg.append('g')
     .attr('class', 'y axis')
     .call(yAxis.ticks(5, ',.0f'));
-  svg.append('g')			
+  svg.append('g')
     .attr('class', 'grid')
     .call(yAxis
           .ticks(5)
           .tickSize(-width)
           .tickFormat(''));
+}
+
+function formatCases(cases) {
+  return new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+    useGrouping: true
+  }).format(cases);
 }
 
 function plotData(data, same_scale) {
@@ -66,7 +74,7 @@ function plotData(data, same_scale) {
         div.transition()
             .duration(200)
             .style("opacity", .9);
-        div	.html(d[1] + ' cases<br/>' + d3.timeFormat('%m/%d')(d[0]))
+        div.html(formatCases(d[1]) + ' cases<br/>' + d3.timeFormat('%m/%d')(d[0]))
             .style("left", (d3.event.pageX) + "px")
             .style("top", (d3.event.pageY - 28) + "px");
         })
