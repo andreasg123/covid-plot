@@ -1,4 +1,4 @@
-import {population} from './population.js';
+import {us_population, ca_population} from './population.js';
 import {toDate} from './utils.js';
 
 var div = d3.select("body").append("div")
@@ -34,14 +34,14 @@ function formatCases(cases) {
 }
 
 function plotData(data, same_scale) {
-  console.log(data);
+  // console.log(data);
   const margin = {top: 20, right: 20, bottom: 70, left: 45}
   const width = 800 - margin.left - margin.right;
   const height = 300 - margin.top - margin.bottom;
   const overall_max_y = same_scale &&
         Math.ceil(Math.max(...data.map(([_, sd]) => Math.max(...sd.map(x => x.positive)))));
   for (const [state, sd] of data) {
-    console.log(state, sd);
+    // console.log(state, sd);
     const min_x = sd[0].date;
     const max_x = sd[sd.length - 1].date;
     const max_y = same_scale ? overall_max_y : Math.ceil(Math.max(...sd.map(x => x.positive)));
@@ -106,12 +106,13 @@ function plotData(data, same_scale) {
       .attr('y', 12)
       .style('font-size', '16px')
       .text(state);
-    console.log(svg);
+    // console.log(svg);
   }
 }
 
 function processData(data, states, normalize) {
   const state_map = new Map();
+  const population = california ? ca_population : us_population;
   data.forEach(d => {
     let s = state_map.get(d.state);
     if (!s) {
@@ -165,10 +166,33 @@ async function loadData(states, normalize, same_scale) {
   cb.checked = normalize;
   cb = document.getElementById('scale');
   cb.checked = same_scale;
-  states = states ? states.toUpperCase().split(/[, ]+/) : [];
-  const url = 'https://covidtracking.com/api/states/daily';
+  if (california) {
+    states = states ? states.split(/ *, */) : [];
+  }
+  else {
+    states = states ? states.toUpperCase().split(/[, ]+/) : [];
+  }
+  const url = california ?
+        'https://data.ca.gov/dataset/covid-19-cases/resource/926fd08f-cc91-4828-af38-bd45de97f8c3/download/statewide_cases.csv' :
+        'https://covidtracking.com/api/states/daily';
   const res = await fetch(url);
-  const json = await res.json();
+  let json;
+  if (california) {
+    const text = await res.text();
+    const lines = text.split(/\r?\n/);
+    if (!lines[lines.length - 1]) {
+      lines.pop();
+    }
+    lines.shift();
+    lines.reverse();
+    json = lines.map(x => {
+      const v = x.split(',');
+      return {state: v[0], positive: v[1], death: v[2], date: Number(v[5].replace(/-/g, ''))};
+    });
+  }
+  else {
+    json = await res.json();
+  }
   let data = processData(json, states, normalize);
   data = data.slice(0, 10);
   plotData(data, same_scale);
