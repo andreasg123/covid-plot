@@ -1,4 +1,4 @@
-import {population} from './population.js';
+import {us_population} from './population.js';
 import {toDate} from './utils.js';
 
 function addAxes(svg, xScale, yScale, width, height, grid_ticks) {
@@ -232,7 +232,7 @@ function processData(data, states, normalize) {
     if (!max_pos.has(d.state)) {
       let cases = d.positive || 0;
       if (normalize) {
-        const p = population[d.state];
+        const p = us_population[d.state];
         cases *= 100000 / p;
       }
       max_pos.set(d.state, cases);
@@ -256,7 +256,7 @@ function processData(data, states, normalize) {
       let cases = d.positive || 0;
       let deaths = d.death || 0;
       if (normalize) {
-        const p = population[d.state];
+        const p = us_population[d.state];
         cases = Math.round(cases * 100000 / p);
         deaths = Math.round(deaths * 100000 / p);
       }
