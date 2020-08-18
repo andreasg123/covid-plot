@@ -172,9 +172,10 @@ async function loadData(states, normalize, same_scale) {
   else {
     states = states ? states.toUpperCase().split(/[, ]+/) : [];
   }
+  // https://covidtracking.com/data/api
   const url = california ?
         'https://data.ca.gov/dataset/covid-19-cases/resource/926fd08f-cc91-4828-af38-bd45de97f8c3/download/statewide_cases.csv' :
-        'https://covidtracking.com/api/states/daily';
+        'https://api.covidtracking.com/v1/states/daily.json';
   const res = await fetch(url);
   let json;
   if (california) {
