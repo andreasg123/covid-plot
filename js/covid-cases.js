@@ -1,126 +1,183 @@
 import {us_population, ca_population} from './population.js';
 import {toDate} from './utils.js';
 
-var div = d3.select("body").append("div")
-    .attr("class", "tooltip")
-    .style("opacity", 0);
+const e = React.createElement;
+const Plot = createPlotlyComponent.default(Plotly);
 
-function addAxes(svg, xScale, yScale, width, height) {
-  // Axes
-  const xAxis = d3.axisBottom(xScale);
-  const yAxis = d3.axisLeft(yScale);
-  svg.append('g')
-    .attr('class', 'x axis')
-    .attr('transform', `translate(0,${height})`)
-    .call(xAxis.ticks(6).tickFormat(d3.timeFormat("%m/%d")));
-  // Don't use scientific notation for the y-axis and add thousand separators
-  svg.append('g')
-    .attr('class', 'y axis')
-    .call(yAxis.ticks(5, ',.0f'));
-  svg.append('g')
-    .attr('class', 'grid')
-    .call(yAxis
-          .ticks(5)
-          .tickSize(-width)
-          .tickFormat(''));
-}
-
-function formatCases(cases) {
-  return new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 1,
-    useGrouping: true
-  }).format(cases);
-}
-
-function plotData(data, same_scale) {
-  // console.log(data);
-  const margin = {top: 20, right: 20, bottom: 70, left: 45}
-  const width = 800 - margin.left - margin.right;
-  const height = 300 - margin.top - margin.bottom;
-  const overall_max_y = same_scale &&
-        Math.ceil(Math.max(...data.map(([_, sd]) => Math.max(...sd.map(x => x.positive)))));
-  for (const [state, sd] of data) {
-    // console.log(state, sd);
-    const min_x = sd[0].date;
-    const max_x = sd[sd.length - 1].date;
-    const max_y = same_scale ? overall_max_y : Math.ceil(Math.max(...sd.map(x => x.positive)));
-    const svg = d3.select('.container')
-          .append('svg')
-          .attr('width', width + margin.left + margin.right)
-          .attr('height', height + margin.top + margin.bottom)
-          .append('g')
-          .attr('transform', `translate(${margin.left},${margin.top})`);
-    const xScale = d3.scaleTime()
-          .domain([toDate(min_x), toDate(max_x)])
-          .range([0, width]);
-    const yScale = d3.scaleLinear()
-          .domain([0, max_y])
-          .nice()
-          .range([height, 0]);
-    addAxes(svg, xScale, yScale, width, height);
-    const bar_width = 0.8 * width / sd.length;
-    svg.selectAll("bar")
-      .data(sd.map(d => [toDate(d.date), d.positive]))
-      .enter().append("rect")
-      .style("fill", "steelblue")
-      .attr("x", d => xScale(d[0]))
-      .attr("width", bar_width)
-      .attr("y", d => yScale(d[1]))
-      .attr("height", d => height - yScale(d[1]))
-
-      // tooltip handler
-      .on("mouseover", function(d) {
-        div.transition()
-            .duration(200)
-            .style("opacity", .9);
-        div.html(formatCases(d[1]) + ' cases<br/>' + d3.timeFormat('%m/%d')(d[0]))
-            .style("left", (d3.event.pageX) + "px")
-            .style("top", (d3.event.pageY - 28) + "px");
-
-        // add orange highlight on hover
-        d3.select(this).style("fill", "orange")
-      })
-      .on('mousemove', function (d) {
-        div.style("left", (d3.event.pageX) + "px")
-          .style("top", (d3.event.pageY - 28) + "px");
-      })
-      .on("mouseout", function(d) {
-          div.transition()
-              .duration(500)
-              .style("opacity", 0);
-          d3.select(this).style("fill", "steelblue")
-    });
-
-    svg.append('g')
-      .attr('class', 'line')
-      .selectAll('path')
-      .data([sd.map(d => [xScale(toDate(d.date)) + 0.5 * bar_width,
-                          yScale(d.mean_positive)])])
-      .enter().append('path')
-      .style('stroke', 'darkblue')
-      .style('stroke-width', '1.5px')
-      .attr('d', d3.line());
-    svg.append('text')
-      .attr('x', 10)
-      .attr('y', 12)
-      .style('font-size', '16px')
-      .text(state);
-    // console.log(svg);
+function selectBestStates(states, data, scale_map, key) {
+  let values;
+  if (california) {
+    values = states ? states.split(/ *, */) : [];
   }
+  else {
+    values = states ? states.toUpperCase().split(/[, ]+/) : [];
+  }
+  const filtered = Array.from(new Set(values.filter(s => data.has(s))));
+  if (filtered.length < 10) {
+    const sorted = Array.from(data.entries())
+          .map(([k, v]) => [k, v[v.length - 1][key] * scale_map.get(k)])
+          .sort((a, b) => b[1] - a[1]);
+    for (const [k, v] of sorted) {
+      if (!filtered.includes(k)) {
+        filtered.push(k);
+        if (filtered.length >= 10) {
+          break;
+        }
+      }
+    }
+  }
+  return filtered;
 }
 
-function processData(data, states, normalize) {
-  const state_map = new Map();
+function DataController(props) {
+  const [states, setStates] = React.useState(props.states);
+  const [deaths, setDeaths] = React.useState(props.normalize);
+  const [normalize, setNormalize] = React.useState(props.normalize);
+  const [same, setSame] = React.useState(props.same_scale);
+  const onChangeStates = evt => {
+    setStates(evt.target.value);
+  };
+  const onChangeDeaths = evt => {
+    setDeaths(evt.target.checked);
+  };
+  const onChangeNormalize = evt => {
+    setNormalize(evt.target.checked);
+  };
+  const onChangeSame = evt => {
+    setSame(evt.target.checked);
+  };
+  const onSubmit = evt => {
+    evt.preventDefault();
+  };
+  const data = props.data || new Map();
   const population = california ? ca_population : us_population;
+  // Checking "data.size" is sufficient because the data is only retrieved once.
+  const scale_map = React.useMemo(() => {
+    return new Map(Array.from(data.keys()).map(
+      s => [s, normalize ? 100000 / population[s] : 1]));
+  }, [data.size, normalize]);
+  const key1 = deaths ? 'death' : 'positive';
+  const key2 = 'mean_' + key1;
+  const prev = React.useRef({same, deaths});
+  // Keep track of previous traces to maintain "==="
+  const traces = React.useRef(new Map());
+  if (deaths !== prev.current.deaths) {
+    traces.current.clear();
+    prev.current.deaths = deaths;
+  }
+  const selected = React.useMemo(() => {
+    const selected = selectBestStates(states, data, scale_map, key2);
+    for (const s of selected) {
+      const scale = scale_map.get(s);
+      const series = data.get(s);
+      const x = series.map(d => toDate(d.date));
+      const y = series.map(d => d[key1] * scale);
+      const y2 = series.map(d => d[key2] * scale);
+      const prev = traces.current.get(s);
+      const len = y.length;
+      if (!prev || prev[0].y.length !== len || prev[0].y[len - 1] !== y[len - 1]) {
+        const hovertemplate = normalize ? '%{y:.1f}' : '%{y:.0f}';
+        traces.current.set(s, [{
+          type: 'bar', name: 'daily', x, y, showlegend: false, hovertemplate
+        }, {
+          type: 'line', name: '7-day', x, y: y2, showlegend: false,
+          hovertemplate: '%{y:.1f}', line: {color: 'darkblue'}
+        }]);
+      }
+    }
+    return selected;
+  }, [states, deaths, data, scale_map]);
+  const overall_max_y = same &&
+        Math.max(...selected.map(s => {
+          const scale = scale_map.get(s);
+          const series = data.get(s);
+          return Math.max(...series.map(d => d[key1] * scale));
+        }));
+  const layout = React.useRef(new Map());
+  if (same !== prev.current.same) {
+    layout.current.clear();
+    prev.current.same = same;
+  }
+  for (const s of selected) {
+    let lyt = layout.current.get(s);
+    if (!lyt) {
+      lyt = {
+        autosize: true,
+        title: {
+          text: s,
+          xref: 'paper',
+          yref: 'paper',
+          x: 0,
+          y: 1,
+          xanchor: 'left',
+          yanchor: 'top',
+          pad: {l: 10, t: 0}
+        },
+        margin: {
+          l: 40,
+          r: 10,
+          b: 30,
+          t: 10,
+          pad: 5
+        }
+      };
+      layout.current.set(s, lyt);
+    }
+    if (same) {
+      lyt.yaxis = {range: [0, overall_max_y]};
+    }
+  }
+  const style = React.useMemo(() => ({width: '100%', height: '300px', marginTop: '16px'}), []);
+  const config = React.useMemo(() => ({displayModeBar: false}), []);
+  const plots = selected.map(s => e(Plot, {
+    key: s,
+    data: traces.current.get(s),
+    layout: layout.current.get(s),
+    style,
+    useResizeHandler: true,
+    config
+  }));
+  return e(React.Fragment, {},
+           e('form', {onSubmit},
+             e('label', {},
+               e('b', {}, california ? 'Counties:' : 'States:'),
+               ' ',
+               e('input', {type: 'text', 'name': 'states',
+                           'value': states, onChange: onChangeStates})),
+             '\u00a0 ',
+             e('label', {},
+               'deaths',
+               e('input', {type: 'checkbox', checked: deaths,
+                           onChange: onChangeDeaths})),
+             '\u00a0 ',
+             e('label', {},
+               'per 100,000',
+               e('input', {type: 'checkbox', checked: normalize,
+                           onChange: onChangeNormalize})),
+             '\u00a0 ',
+             e('label', {},
+               'same scale',
+               e('input', {type: 'checkbox', checked: same,
+                           onChange: onChangeSame})),
+             '\u00a0\u00a0 Plus the ',
+             california ? 'counties' : 'states',
+             ' with the most cases/deaths'),
+           ...(plots.length ? plots : [e('p', {}, 'Loading...')]));
+}
+
+function renderData(props) {
+  ReactDOM.render(e(DataController, props), document.getElementById('container'));
+}
+
+function processData(data) {
+  const state_map = new Map();
   data.forEach(d => {
     let s = state_map.get(d.state);
     if (!s) {
       s = [];
       state_map.set(d.state, s);
     }
-    const factor = normalize ? 100000 / population[d.state] : 1;
-    s.push({date: d.date, positive: d.positive * factor, death: d.death * factor});
+    s.push(d);
   });
   const max_pos = new Map();
   const n = 7;
@@ -133,8 +190,8 @@ function processData(data, states, normalize) {
     let sum_positive = 0;
     let sum_death = 0;
     for (let i = 0; i < Math.min(n, v.length); i++) {
-      sum_positive += v[i].positive;
-      sum_death += v[i].death;
+      sum_positive += v[i].positive || 0;
+      sum_death += v[i].death || 0;
       v[i].mean_positive = sum_positive / (i + 1);
       v[i].mean_death = sum_death / (i + 1);
     }
@@ -146,32 +203,10 @@ function processData(data, states, normalize) {
     }
     max_pos.set(k, v[v.length - 1].mean_positive);
   }
-  const top_states = Array.from(max_pos)
-      .sort((a, b) => b[1] - a[1])
-      .map(t => t[0]);
-  if (states && states.length) {
-    const remove = new Set(states);
-    states.push(...top_states.filter(t => !remove.has(t)));
-  }
-  else {
-    states = top_states;
-  }
-  return states.map(s => [s, state_map.get(s)]);
+  return state_map;
 }
 
-async function loadData(states, normalize, same_scale) {
-  const input = document.querySelector('input[type=text]');
-  input.value = states;
-  let cb = document.getElementById('normalize');
-  cb.checked = normalize;
-  cb = document.getElementById('scale');
-  cb.checked = same_scale;
-  if (california) {
-    states = states ? states.split(/ *, */) : [];
-  }
-  else {
-    states = states ? states.toUpperCase().split(/[, ]+/) : [];
-  }
+async function loadData(props) {
   // https://covidtracking.com/data/api
   const url = california ?
         'https://data.ca.gov/dataset/covid-19-cases/resource/926fd08f-cc91-4828-af38-bd45de97f8c3/download/statewide_cases.csv' :
@@ -188,17 +223,23 @@ async function loadData(states, normalize, same_scale) {
     lines.reverse();
     json = lines.map(x => {
       const v = x.split(',');
-      return {state: v[0], positive: v[1], death: v[2], date: Number(v[5].replace(/-/g, ''))};
+      return {state: v[0], positive: Number(v[1]), death: Number(v[2]),
+              date: Number(v[5].replace(/-/g, ''))};
     });
   }
   else {
     json = await res.json();
   }
-  let data = processData(json, states, normalize);
-  data = data.slice(0, 10);
-  plotData(data, same_scale);
+  const data = processData(json);
+  renderData({...props, data});
 }
 
 const params = (new URL(document.location)).searchParams;
-loadData(params.get('states'), params.get('normalize') === 'true',
-         params.get('scale') === 'same');
+const props = {
+  states: params.get('states') || '',
+  deaths: params.get('deaths') === 'true',
+  normalize: params.get('normalize') === 'true',
+  same_scale: params.get('scale') === 'same'
+};
+renderData(props);
+loadData(props);

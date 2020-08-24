@@ -7,15 +7,12 @@
 <link rel="stylesheet" type="text/css" href="css/covid-cases.css"/>
 </head>
 <body>
+<div class="header">
 <h3>COVID-19 U.S. States Daily Cases</h3>
+<a href="california.html">California</a>
+</div>
 
-<p><form><b>States:</b> <input type="text" name="states">&nbsp;
-<label for="normalize">per 100,000</label><input type="checkbox" id="normalize" name="normalize" value="true">&nbsp;
-<label for="scale">same scale</label><input type="checkbox" id="scale" name="scale" value="same">&nbsp;
-<input type="submit" value="Plot">&nbsp;&nbsp; Plus the states with the most cases
-</form></p>
-
-<div class="container">
+<div id="container">
 </div>
 
 <p><a href="growth.html">Exponential growth of cumulative cases</a> (not as
@@ -24,7 +21,11 @@ illustrative as in the early days of COVID-19).</p>
 <p>Data from the <a href="https://covidtracking.com/">COVID Tracking Project</a>.
 JavaScript: <a href="https://github.com/andreasg123/covid-plot">GitHub</a>.</p>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.15.0/d3.min.js" crossorigin></script>
+<!-- Note: when deploying, replace "development.js" with "production.min.js". -->
+<script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+<script src="https://cdn.plot.ly/plotly-latest.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-plotly.js@latest/dist/create-plotly-component.js" crossorigin></script>
 <script>
 let california = false;
 </script>
