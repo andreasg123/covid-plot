@@ -4,15 +4,39 @@ import {toDate} from './utils.js';
 const e = React.createElement;
 const Plot = createPlotlyComponent.default(Plotly);
 
-function selectBestStates(states, data, scale_map, key) {
+function selectBestStates(states, sorted_states, data, scale_map, key) {
   let values;
   if (california) {
-    values = states ? states.split(/ *, */) : [];
+    values = states ? states.toUpperCase().split(/ *, */) : [];
   }
   else {
     values = states ? states.toUpperCase().split(/[, ]+/) : [];
   }
-  const filtered = Array.from(new Set(values.filter(s => data.has(s))));
+  const filtered = [];
+  for (const v of values) {
+    // Binary search for prefix
+    const v2 = v.trim();
+    let left = 0;
+    let right = sorted_states.length - 1;
+    while (left <= right) {
+      const center = Math.floor(0.5 * (left + right));
+      if (v2 < sorted_states[center][0]) {
+        right = center - 1;
+      }
+      else if (v2 > sorted_states[center][0]) {
+        left = center + 1;
+      }
+      else {
+        left = center;
+        break;
+      }
+    }
+    if (left < sorted_states.length && sorted_states[left][0].startsWith(v2) &&
+        (left === sorted_states.length || !sorted_states[left + 1][0].startsWith(v2)) &&
+        !filtered.includes(sorted_states[left][1])) {
+      filtered.push(sorted_states[left][1]);
+    }
+  }
   if (filtered.length < 10) {
     const sorted = Array.from(data.entries())
           .map(([k, v]) => [k, v[v.length - 1][key] * scale_map.get(k)])
@@ -27,6 +51,13 @@ function selectBestStates(states, data, scale_map, key) {
     }
   }
   return filtered;
+}
+
+function sortStates(data) {
+  const sorted = Array.from(data.keys())
+        .map(s => [s.toUpperCase(), s])
+        .sort((a, b) => a[0].localeCompare(b[0]));
+  return sorted;
 }
 
 function DataController(props) {
@@ -56,6 +87,7 @@ function DataController(props) {
     return new Map(Array.from(data.keys()).map(
       s => [s, normalize ? 100000 / population[s] : 1]));
   }, [data.size, normalize]);
+  const sorted_states = React.useMemo(() => sortStates(data), [data.size]);
   const key1 = deaths ? 'death' : 'positive';
   const key2 = 'mean_' + key1;
   const prev = React.useRef({same, deaths});
@@ -66,7 +98,7 @@ function DataController(props) {
     prev.current.deaths = deaths;
   }
   const selected = React.useMemo(() => {
-    const selected = selectBestStates(states, data, scale_map, key2);
+    const selected = selectBestStates(states, sorted_states, data, scale_map, key2);
     for (const s of selected) {
       const scale = scale_map.get(s);
       const series = data.get(s);
