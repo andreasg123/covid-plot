@@ -24,7 +24,8 @@ JavaScript: <a href="https://github.com/andreasg123/covid-plot">GitHub</a>.</p>
 <script src="https://cdn.plot.ly/plotly-latest.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-plotly.js@latest/dist/create-plotly-component.js" crossorigin></script>
 <script>
-let california = true;
+// "let" doesn't work across script files in Safari.
+var california = true;
 </script>
 <script src="js/covid-cases.js" type="module" crossorigin></script>
 </body>
