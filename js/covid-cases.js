@@ -87,9 +87,10 @@ function DataController(props) {
   const prev = React.useRef({same, deaths});
   // Keep track of previous traces to maintain "==="
   const traces = React.useRef(new Map());
-  if (deaths !== prev.current.deaths) {
+  if (deaths !== prev.current.deaths || normalize !== prev.current.normalize) {
     traces.current.clear();
     prev.current.deaths = deaths;
+    prev.current.normalize = normalize;
   }
   const selected = React.useMemo(() => {
     const selected = selectBestStates(states, sorted_states, data, scale_map, key2);
@@ -112,7 +113,7 @@ function DataController(props) {
       }
     }
     return selected;
-  }, [states, deaths, data, scale_map]);
+  }, [states, deaths, normalize, data.size]);
   const overall_max_y = same &&
         Math.max(...selected.map(s => {
           const scale = scale_map.get(s);
