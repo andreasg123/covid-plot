@@ -5,25 +5,19 @@ const e = React.createElement;
 const Plot = createPlotlyComponent.default(Plotly);
 
 function selectBestStates(states, sorted_states, data, scale_map, key) {
-  let values;
-  if (california) {
-    values = states ? states.toUpperCase().split(/ *, */) : [];
-  }
-  else {
-    values = states ? states.toUpperCase().split(/[, ]+/) : [];
-  }
+  const pat = california ? / *, */ : /[, ]+/;
+  const values = states ? states.trim().toUpperCase().split(pat) : [];
   const filtered = [];
   for (const v of values) {
     // Binary search for prefix
-    const v2 = v.trim();
     let left = 0;
     let right = sorted_states.length - 1;
     while (left <= right) {
       const center = Math.floor(0.5 * (left + right));
-      if (v2 < sorted_states[center][0]) {
+      if (v < sorted_states[center][0]) {
         right = center - 1;
       }
-      else if (v2 > sorted_states[center][0]) {
+      else if (v > sorted_states[center][0]) {
         left = center + 1;
       }
       else {
@@ -31,8 +25,8 @@ function selectBestStates(states, sorted_states, data, scale_map, key) {
         break;
       }
     }
-    if (left < sorted_states.length && sorted_states[left][0].startsWith(v2) &&
-        (left === sorted_states.length || !sorted_states[left + 1][0].startsWith(v2)) &&
+    if (left < sorted_states.length && sorted_states[left][0].startsWith(v) &&
+        (left === sorted_states.length || !sorted_states[left + 1][0].startsWith(v)) &&
         !filtered.includes(sorted_states[left][1])) {
       filtered.push(sorted_states[left][1]);
     }
