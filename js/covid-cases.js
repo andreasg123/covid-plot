@@ -54,11 +54,22 @@ function sortStates(data) {
   return sorted;
 }
 
+function updateURL(props) {
+  let url = '';
+  for (const p of ['states', 'deaths', 'normalize', 'same_scale']) {
+    if (props[p]) {
+      url += (url ? '&' : '?') + p + '=' + props[p];
+    }
+  }
+  history.pushState(props, '', url);
+}
+
 function DataController(props) {
   const [states, setStates] = React.useState(props.states);
-  const [deaths, setDeaths] = React.useState(props.normalize);
+  const [deaths, setDeaths] = React.useState(props.deaths);
   const [normalize, setNormalize] = React.useState(props.normalize);
   const [same, setSame] = React.useState(props.same_scale);
+  updateURL({states, deaths, normalize, same_scale: same});
   const onChangeStates = evt => {
     setStates(evt.target.value);
   };
